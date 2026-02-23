@@ -1,0 +1,820 @@
+import { useState, useEffect, useRef } from "react";
+
+// ─── 상수 ────────────────────────────────────────────────────────────────────
+const LANGUAGES = [
+  { code: "en", name: "English",    flag: "🇺🇸" },
+  { code: "ko", name: "한국어",      flag: "🇰🇷" },
+  { code: "ja", name: "日本語",      flag: "🇯🇵" },
+  { code: "zh", name: "中文",        flag: "🇨🇳" },
+  { code: "es", name: "Español",    flag: "🇪🇸" },
+  { code: "fr", name: "Français",   flag: "🇫🇷" },
+  { code: "de", name: "Deutsch",    flag: "🇩🇪" },
+  { code: "pt", name: "Português",  flag: "🇧🇷" },
+  { code: "ar", name: "العربية",    flag: "🇸🇦" },
+  { code: "hi", name: "हिन्दी",       flag: "🇮🇳" },
+  { code: "ru", name: "Русский",    flag: "🇷🇺" },
+  { code: "it", name: "Italiano",   flag: "🇮🇹" },
+  { code: "vi", name: "Tiếng Việt", flag: "🇻🇳" },
+  { code: "th", name: "ภาษาไทย",    flag: "🇹🇭" },
+  { code: "tr", name: "Türkçe",     flag: "🇹🇷" },
+];
+
+const TOPICS = [
+  { id: "travel",   icon: "✈️", label: "Travel",      ko: "여행" },
+  { id: "business", icon: "💼", label: "Business",    ko: "비즈니스" },
+  { id: "daily",    icon: "☀️", label: "Daily Life",  ko: "일상생활" },
+  { id: "food",     icon: "🍜", label: "Food",        ko: "음식" },
+  { id: "health",   icon: "🏥", label: "Health",      ko: "건강" },
+  { id: "shopping", icon: "🛍️", label: "Shopping",   ko: "쇼핑" },
+  { id: "culture",  icon: "🎭", label: "Culture",     ko: "문화" },
+  { id: "tech",     icon: "💻", label: "Technology",  ko: "기술" },
+];
+
+const MODES = [
+  { id: "vocab",     icon: "📖", label: "단어 학습",      desc: "Vocabulary" },
+  { id: "dialog",    icon: "💬", label: "다이얼로그",      desc: "Dialogue" },
+  { id: "quiz",      icon: "🎯", label: "퀴즈",           desc: "Quiz" },
+  { id: "ai",        icon: "🤖", label: "AI 튜터",        desc: "AI Chat" },
+  { id: "community", icon: "👥", label: "커뮤니티",        desc: "Community" },
+];
+
+const VOCAB_DATA = {
+  travel: [
+    { en: "passport",      ko: "여권",    ja: "パスポート",  zh: "护照",     es: "pasaporte",     example: "Don't forget your passport!" },
+    { en: "reservation",   ko: "예약",    ja: "予約",       zh: "预订",     es: "reservación",   example: "I have a reservation for two." },
+    { en: "departure",     ko: "출발",    ja: "出発",       zh: "出发",     es: "salida",        example: "What time is the departure?" },
+    { en: "boarding gate", ko: "탑승구",  ja: "搭乗口",     zh: "登机口",   es: "puerta",        example: "Please go to boarding gate 12." },
+    { en: "accommodation", ko: "숙소",    ja: "宿泊",       zh: "住宿",     es: "alojamiento",   example: "We need accommodation for 3 nights." },
+  ],
+  business: [
+    { en: "negotiate",   ko: "협상하다",    ja: "交渉する",   zh: "谈判",      es: "negociar",    example: "We need to negotiate the terms." },
+    { en: "deadline",    ko: "마감일",      ja: "締め切り",   zh: "截止日期",   es: "fecha límite", example: "The deadline is next Friday." },
+    { en: "proposal",    ko: "제안서",      ja: "提案書",     zh: "提案",      es: "propuesta",   example: "Please review the proposal." },
+    { en: "revenue",     ko: "수익",        ja: "収益",       zh: "收入",      es: "ingresos",    example: "Our revenue increased by 20%." },
+    { en: "stakeholder", ko: "이해관계자",  ja: "利害関係者", zh: "利益相关者", es: "parte",       example: "All stakeholders must attend." },
+  ],
+  daily: [
+    { en: "commute",      ko: "통근",   ja: "通勤",   zh: "通勤", es: "viaje",    example: "My commute takes 30 minutes." },
+    { en: "grocery",      ko: "식료품", ja: "食料品", zh: "杂货", es: "comida",   example: "I need to buy groceries." },
+    { en: "neighborhood", ko: "동네",   ja: "近所",   zh: "社区", es: "barrio",   example: "It's a friendly neighborhood." },
+    { en: "routine",      ko: "일과",   ja: "習慣",   zh: "日常", es: "rutina",   example: "My morning routine starts at 7." },
+    { en: "appointment",  ko: "약속",   ja: "予約",   zh: "约会", es: "cita",     example: "I have a doctor's appointment." },
+  ],
+  food: [
+    { en: "appetizer",  ko: "애피타이저", ja: "前菜",   zh: "开胃菜", es: "aperitivo",   example: "Shall we order an appetizer?" },
+    { en: "seasoning",  ko: "양념",      ja: "調味料", zh: "调味料", es: "condimento",  example: "This needs more seasoning." },
+    { en: "cuisine",    ko: "요리",      ja: "料理",   zh: "料理",   es: "cocina",      example: "I love Italian cuisine." },
+    { en: "ingredient", ko: "재료",      ja: "材料",   zh: "食材",   es: "ingrediente", example: "What are the main ingredients?" },
+    { en: "portion",    ko: "1인분",     ja: "一人前", zh: "份量",   es: "porción",     example: "The portion size is large." },
+  ],
+  health:   [
+    { en: "symptom",    ko: "증상",   ja: "症状",   zh: "症状", es: "síntoma",   example: "Describe your symptoms please." },
+    { en: "prescription",ko:"처방전", ja: "処方箋", zh: "处方", es: "receta",    example: "Take this prescription to the pharmacy." },
+    { en: "diagnosis",  ko: "진단",   ja: "診断",   zh: "诊断", es: "diagnóstico",example: "The diagnosis was positive." },
+    { en: "allergy",    ko: "알레르기",ja: "アレルギー",zh:"过敏",es: "alergia",  example: "I have a nut allergy." },
+    { en: "recovery",   ko: "회복",   ja: "回復",   zh: "康复", es: "recuperación",example:"Wishing you a speedy recovery." },
+  ],
+  shopping: [
+    { en: "discount",   ko: "할인",   ja: "割引",   zh: "折扣", es: "descuento", example: "Is there a discount available?" },
+    { en: "receipt",    ko: "영수증", ja: "領収書", zh: "收据", es: "recibo",    example: "May I have a receipt please?" },
+    { en: "refund",     ko: "환불",   ja: "払い戻し",zh:"退款", es: "reembolso", example: "I'd like to request a refund." },
+    { en: "size",       ko: "사이즈", ja: "サイズ", zh: "尺寸", es: "talla",     example: "Do you have this in my size?" },
+    { en: "checkout",   ko: "계산대", ja: "レジ",   zh: "结账", es: "caja",      example: "Let's go to the checkout." },
+  ],
+  culture: [
+    { en: "tradition",  ko: "전통",   ja: "伝統",   zh: "传统", es: "tradición", example: "It's an ancient tradition." },
+    { en: "festival",   ko: "축제",   ja: "祭り",   zh: "节日", es: "festival",  example: "The festival lasts three days." },
+    { en: "heritage",   ko: "유산",   ja: "遺産",   zh: "遗产", es: "patrimonio",example: "It's a UNESCO World Heritage Site." },
+    { en: "ceremony",   ko: "의식",   ja: "式典",   zh: "仪式", es: "ceremonia", example: "The opening ceremony was stunning." },
+    { en: "artifact",   ko: "유물",   ja: "遺物",   zh: "文物", es: "artefacto", example: "The artifact is 3000 years old." },
+  ],
+  tech: [
+    { en: "algorithm",  ko: "알고리즘", ja: "アルゴリズム",zh:"算法",  es: "algoritmo", example: "The algorithm processes data fast." },
+    { en: "database",   ko: "데이터베이스",ja:"データベース",zh:"数据库",es:"base de datos",example:"The database stores user info." },
+    { en: "framework",  ko: "프레임워크",ja:"フレームワーク",zh:"框架", es: "framework", example: "React is a popular framework." },
+    { en: "deployment", ko: "배포",    ja: "デプロイ", zh: "部署",   es: "despliegue", example: "The deployment went smoothly." },
+    { en: "encryption", ko: "암호화",  ja: "暗号化",   zh: "加密",   es: "cifrado",    example: "All data is protected by encryption." },
+  ],
+};
+
+const DIALOG_DATA = {
+  travel: [
+    { title: "At the Airport", exchanges: [
+      { speaker:"A", en:"Excuse me, where is the check-in counter?", ko:"실례합니다, 체크인 카운터가 어디에 있나요?", role:"Traveler" },
+      { speaker:"B", en:"It's on the second floor, near the entrance.", ko:"2층에 있습니다, 입구 근처에요.", role:"Staff" },
+      { speaker:"A", en:"Thank you! Is this flight delayed?", ko:"감사합니다! 이 항공편이 지연되나요?", role:"Traveler" },
+      { speaker:"B", en:"No, it's on time. Please go to gate 7.", ko:"아니요, 정시입니다. 7번 게이트로 가세요.", role:"Staff" },
+    ]},
+    { title: "Hotel Check-in", exchanges: [
+      { speaker:"A", en:"I have a reservation under Kim.", ko:"김 이름으로 예약했습니다.", role:"Guest" },
+      { speaker:"B", en:"Welcome! Let me pull up your reservation.", ko:"환영합니다! 예약을 확인해볼게요.", role:"Receptionist" },
+      { speaker:"A", en:"I'd prefer a room with a view if possible.", ko:"가능하면 전망 있는 방을 원합니다.", role:"Guest" },
+      { speaker:"B", en:"Certainly! We have a beautiful ocean view room.", ko:"물론이죠! 멋진 오션뷰 방이 있습니다.", role:"Receptionist" },
+    ]},
+  ],
+  business: [
+    { title: "Job Interview", exchanges: [
+      { speaker:"A", en:"Tell me about your experience.", ko:"귀하의 경험에 대해 말씀해 주세요.", role:"Interviewer" },
+      { speaker:"B", en:"I have 5 years in software development.", ko:"저는 소프트웨어 개발에 5년 경력이 있습니다.", role:"Candidate" },
+      { speaker:"A", en:"What's your greatest strength?", ko:"가장 큰 강점이 무엇인가요?", role:"Interviewer" },
+      { speaker:"B", en:"I'm highly adaptable and a fast learner.", ko:"저는 적응력이 뛰어나고 빠르게 배웁니다.", role:"Candidate" },
+    ]},
+  ],
+  daily: [
+    { title: "At the Coffee Shop", exchanges: [
+      { speaker:"A", en:"What would you like to order?", ko:"무엇을 주문하시겠어요?", role:"Barista" },
+      { speaker:"B", en:"Can I get a large latte, please?", ko:"라지 라떼 한 잔 주세요.", role:"Customer" },
+      { speaker:"A", en:"Hot or iced?", ko:"뜨겁게 드릴까요, 아이스로 드릴까요?", role:"Barista" },
+      { speaker:"B", en:"Iced please, with oat milk.", ko:"아이스로, 오트밀크로 주세요.", role:"Customer" },
+    ]},
+  ],
+  food: [
+    { title: "Restaurant Order", exchanges: [
+      { speaker:"A", en:"Are you ready to order?", ko:"주문하실 준비가 되셨나요?", role:"Waiter" },
+      { speaker:"B", en:"Yes, I'll have the pasta with tomato sauce.", ko:"네, 토마토 소스 파스타로 할게요.", role:"Customer" },
+      { speaker:"A", en:"Any dietary restrictions?", ko:"식이 제한이 있으신가요?", role:"Waiter" },
+      { speaker:"B", en:"I'm lactose intolerant.", ko:"저는 유당불내증이 있어요.", role:"Customer" },
+    ]},
+  ],
+  health: [
+    { title: "At the Doctor", exchanges: [
+      { speaker:"A", en:"What brings you in today?", ko:"오늘 어디가 불편하세요?", role:"Doctor" },
+      { speaker:"B", en:"I've had a headache for three days.", ko:"3일째 두통이 있어요.", role:"Patient" },
+      { speaker:"A", en:"Any fever or nausea?", ko:"열이나 구역질은 있나요?", role:"Doctor" },
+      { speaker:"B", en:"Some nausea, but no fever.", ko:"구역질은 조금 있는데 열은 없어요.", role:"Patient" },
+    ]},
+  ],
+  shopping: [
+    { title: "At the Store", exchanges: [
+      { speaker:"A", en:"Can I help you find something?", ko:"찾으시는 것이 있나요?", role:"Staff" },
+      { speaker:"B", en:"Yes, I'm looking for a medium-sized jacket.", ko:"네, 미디엄 사이즈 재킷을 찾고 있어요.", role:"Customer" },
+      { speaker:"A", en:"We have some great options on sale.", ko:"세일 중인 좋은 상품들이 있어요.", role:"Staff" },
+      { speaker:"B", en:"Perfect, can I try one on?", ko:"좋아요, 입어볼 수 있나요?", role:"Customer" },
+    ]},
+  ],
+  culture: [
+    { title: "At a Museum", exchanges: [
+      { speaker:"A", en:"This artifact is over 2,000 years old.", ko:"이 유물은 2,000년이 넘었어요.", role:"Guide" },
+      { speaker:"B", en:"That's incredible! What was it used for?", ko:"놀랍네요! 어떤 용도로 쓰였나요?", role:"Visitor" },
+      { speaker:"A", en:"It was used in religious ceremonies.", ko:"종교 의식에 사용되었어요.", role:"Guide" },
+      { speaker:"B", en:"Fascinating. Can I take a photo?", ko:"흥미롭네요. 사진 찍어도 될까요?", role:"Visitor" },
+    ]},
+  ],
+  tech: [
+    { title: "Tech Meeting", exchanges: [
+      { speaker:"A", en:"The deployment failed this morning.", ko:"오늘 아침 배포가 실패했어요.", role:"Developer" },
+      { speaker:"B", en:"What was the error in the logs?", ko:"로그에 어떤 에러가 있었나요?", role:"Manager" },
+      { speaker:"A", en:"A database connection timeout.", ko:"데이터베이스 연결 타임아웃이요.", role:"Developer" },
+      { speaker:"B", en:"Let's fix that before the next release.", ko:"다음 릴리즈 전에 수정합시다.", role:"Manager" },
+    ]},
+  ],
+};
+
+const COMMUNITY_POSTS = [
+  { id:1, user:"TanakaSan 🇯🇵", avatar:"🦊", time:"2분 전", text:"오늘 배운 영어 표현: 'It's on the tip of my tongue' - 뭔가 기억날 듯 말 듯할 때!", likes:24, replies:3, lang:"영어→일어", tags:["표현","idiom"] },
+  { id:2, user:"Maria_ES 🇪🇸",  avatar:"🌸", time:"15분 전", text:"'Por favor' vs 'Please' - Spanish uses it more formally. Anyone notice cultural differences?", likes:18, replies:7, lang:"영어→스페인어", tags:["문화","비교"] },
+  { id:3, user:"BeijingBuddy 🇨🇳",avatar:"🐼",time:"1시간 전",text:"Tip: Chinese '吗' at end of sentence = yes/no question! 你好吗？(Are you well?)", likes:41, replies:12, lang:"중국어", tags:["문법팁"] },
+  { id:4, user:"SeoulStudent 🇰🇷",avatar:"🎭",time:"2시간 전",text:"일본어랑 한국어 문법 구조가 비슷해서 배우기 쉬운 것 같아요! 일본어 공부하시는 분 있나요?", likes:33, replies:8, lang:"일본어", tags:["질문"] },
+];
+
+// ─── 스타일 ───────────────────────────────────────────────────────────────────
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0e17;--surf:#1a1828;--surf2:#231f38;
+  --p:#9b5de5;--a1:#ff6b6b;--a2:#ffd166;--a3:#06d6a0;--a4:#118ab2;
+  --tx:#fffffe;--tx2:#a8a4c3;--br:rgba(255,255,255,0.08);--r:18px;
+}
+body{background:var(--bg);color:var(--tx);font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent}
+.app{max-width:430px;min-height:100vh;margin:0 auto;background:var(--bg);position:relative}
+
+/* Header */
+.hdr{background:linear-gradient(135deg,#1a0533,#0f1a40);padding:50px 20px 20px;position:relative;overflow:hidden}
+.hdr::before{content:'';position:absolute;width:200px;height:200px;background:radial-gradient(circle,rgba(155,93,229,.3),transparent 70%);top:-50px;right:-50px;border-radius:50%}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.logo{font-size:22px;font-weight:900;letter-spacing:-.5px}
+.logo span{color:var(--a2)}
+.streak{background:rgba(255,107,107,.2);border:1px solid rgba(255,107,107,.4);color:var(--a1);padding:6px 12px;border-radius:20px;font-size:13px;font-weight:700}
+.lang-row{display:flex;align-items:center;gap:10px}
+.lang-btn{flex:1;background:rgba(255,255,255,.07);border:1px solid var(--br);color:var(--tx);padding:10px 12px;border-radius:12px;font-size:13px;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;transition:all .2s}
+.lang-btn:hover{background:rgba(155,93,229,.2);border-color:var(--p)}
+.arrow{color:var(--a3);font-size:18px}
+
+/* Nav */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(15,14,23,.95);backdrop-filter:blur(20px);border-top:1px solid var(--br);display:flex;padding:10px 8px 24px;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:none;background:none;color:var(--tx2);font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;border-radius:12px}
+.nav-item.on{color:var(--p)}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:var(--p);opacity:0;transition:.2s}
+.nav-item.on .nav-dot{opacity:1}
+
+/* Scroll */
+.scroll{padding:16px 16px 110px}
+.sec-title{font-size:13px;font-weight:800;color:var(--tx2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+
+/* Topics */
+.topic-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.topic-card{background:var(--surf);border:2px solid transparent;border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.topic-card:hover,.topic-card.on{border-color:var(--p);background:rgba(155,93,229,.15);transform:translateY(-2px)}
+.topic-icon{font-size:24px}
+.topic-lbl{font-size:10px;font-weight:800;color:var(--tx2)}
+.topic-card.on .topic-lbl{color:var(--p)}
+
+/* Modes */
+.modes{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;margin-bottom:24px}
+.modes::-webkit-scrollbar{display:none}
+.mode-card{min-width:100px;background:var(--surf);border:2px solid transparent;border-radius:16px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center;flex-shrink:0}
+.mode-card.on{border-color:var(--a2);background:rgba(255,209,102,.1)}
+.mode-icon{font-size:28px;margin-bottom:6px}
+.mode-lbl{font-size:11px;font-weight:800;color:var(--tx)}
+.mode-desc{font-size:10px;color:var(--tx2);margin-top:2px}
+.mode-card.on .mode-lbl{color:var(--a2)}
+
+/* Stats */
+.stats-row{display:flex;gap:10px;margin-bottom:20px}
+.stat-card{flex:1;background:var(--surf);border:1px solid var(--br);border-radius:14px;padding:14px 12px;text-align:center}
+.stat-num{font-size:24px;font-weight:900}
+.stat-lbl{font-size:11px;color:var(--tx2);font-weight:700;margin-top:2px}
+
+/* Progress */
+.prog-bar{background:var(--surf2);border-radius:8px;height:6px;margin-bottom:6px;overflow:hidden}
+.prog-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--p),var(--a4));transition:width .5s}
+
+/* Vocab Card */
+.vocab-card{background:linear-gradient(135deg,var(--surf),var(--surf2));border:1px solid var(--br);border-radius:var(--r);padding:28px 24px;margin-bottom:16px;position:relative;overflow:hidden;cursor:pointer;transition:transform .1s;min-height:220px;display:flex;flex-direction:column;justify-content:center}
+.vocab-card::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(155,93,229,.15),transparent 70%)}
+.vocab-word{font-size:36px;font-weight:900;margin-bottom:6px}
+.vocab-ph{font-family:'Space Mono',monospace;font-size:13px;color:var(--a3);margin-bottom:16px}
+.vocab-trans{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.trans-pill{background:rgba(255,255,255,.06);border:1px solid var(--br);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700}
+.trans-lang{color:var(--tx2);font-size:10px}
+.vocab-ex{background:rgba(6,214,160,.08);border-left:3px solid var(--a3);padding:10px 14px;border-radius:8px;font-size:13px;color:var(--tx2);font-style:italic}
+.card-nav{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.dots{display:flex;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--surf2);transition:.3s}
+.dot.on{background:var(--p)}
+.dot.done{background:var(--a3)}
+.card-btns{display:flex;gap:10px}
+.btn{padding:10px 20px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s}
+.btn-skip{background:var(--surf2);color:var(--tx2)}
+.btn-know{background:var(--a3);color:#0f0e17}
+.btn-know:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(6,214,160,.4)}
+
+/* Pill tabs */
+.pill-row{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto}
+.pill-row::-webkit-scrollbar{display:none}
+.pill{border:1px solid var(--br);background:var(--surf);color:var(--tx2);padding:8px 16px;border-radius:20px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s}
+.pill.on{background:var(--p);border-color:var(--p);color:white}
+
+/* Dialog */
+.dialog-card{background:var(--surf);border:1px solid var(--br);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.dialog-hdr{background:linear-gradient(135deg,rgba(155,93,229,.2),rgba(17,138,178,.2));padding:14px 18px;border-bottom:1px solid var(--br);font-weight:800;font-size:14px}
+.dialog-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.exchange{display:flex;gap:10px;align-items:flex-start}
+.exchange.right{flex-direction:row-reverse}
+.spk{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.spk-A{background:rgba(155,93,229,.3);color:var(--p)}
+.spk-B{background:rgba(6,214,160,.2);color:var(--a3)}
+.bubble{background:rgba(255,255,255,.04);border:1px solid var(--br);border-radius:12px;padding:10px 14px;flex:1}
+.exchange.right .bubble{background:rgba(155,93,229,.1);border-color:rgba(155,93,229,.3)}
+.exch-en{font-size:14px;font-weight:700;margin-bottom:4px}
+.exch-ko{font-size:12px;color:var(--tx2)}
+.role-lbl{font-size:10px;color:var(--tx2);margin-bottom:2px;font-weight:700;letter-spacing:.5px}
+
+/* AI Chat */
+.ai-hdr{background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(155,93,229,.15));border:1px solid rgba(255,107,107,.2);border-radius:var(--r);padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.ai-avatar{font-size:36px}
+.ai-name{font-weight:900;font-size:16px}
+.ai-desc{font-size:12px;color:var(--tx2);margin-top:2px}
+.ai-status{margin-left:auto;background:rgba(6,214,160,.2);color:var(--a3);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
+.chat-msgs{background:var(--surf);border:1px solid var(--br);border-radius:var(--r);padding:16px;min-height:280px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.chat-msgs::-webkit-scrollbar{width:4px}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--surf2);border-radius:4px}
+.msg{display:flex;gap:8px;align-items:flex-start;max-width:85%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg-av{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(155,93,229,.3)}
+.msg.user .msg-av{background:rgba(255,209,102,.2)}
+.msg-bub{background:var(--surf2);border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5}
+.msg.user .msg-bub{background:linear-gradient(135deg,var(--p),var(--a4))}
+.msg-tr{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;border-top:1px solid rgba(255,255,255,.1);padding-top:4px}
+.chat-row{display:flex;gap:10px}
+.chat-in{flex:1;background:var(--surf);border:1px solid var(--br);border-radius:14px;padding:12px 16px;color:var(--tx);font-family:'Nunito',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.chat-in:focus{border-color:var(--p)}
+.send-btn{width:46px;height:46px;border-radius:14px;border:none;background:var(--p);color:white;font-size:18px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.send-btn:hover:not(:disabled){transform:scale(1.05);box-shadow:0 0 20px rgba(155,93,229,.4)}
+.send-btn:disabled{background:var(--surf2);color:var(--tx2)}
+.typing{display:flex;gap:4px;padding:12px 14px}
+.td{width:6px;height:6px;border-radius:50%;background:var(--tx2);animation:bounce 1.2s infinite}
+.td:nth-child(2){animation-delay:.2s}
+.td:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+.quick-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.quick-btn{background:var(--surf);border:1px solid var(--br);color:var(--tx2);padding:7px 12px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer}
+
+/* Quiz */
+.quiz-card{background:var(--surf);border:1px solid var(--br);border-radius:var(--r);padding:24px;margin-bottom:16px}
+.quiz-q{font-size:22px;font-weight:900;margin-bottom:8px}
+.quiz-ctx{font-size:13px;color:var(--tx2);margin-bottom:24px;font-style:italic}
+.quiz-opts{display:flex;flex-direction:column;gap:10px}
+.quiz-opt{background:var(--surf2);border:2px solid transparent;border-radius:14px;padding:14px 18px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;text-align:left;font-family:'Nunito',sans-serif;color:var(--tx);display:flex;align-items:center;gap:10px}
+.quiz-opt:hover:not(:disabled){border-color:var(--p);background:rgba(155,93,229,.1)}
+.quiz-opt.correct{border-color:var(--a3);background:rgba(6,214,160,.15)}
+.quiz-opt.wrong{border-color:var(--a1);background:rgba(255,107,107,.15)}
+.opt-letter{width:28px;height:28px;border-radius:8px;background:var(--br);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.quiz-res{margin-top:16px;padding:14px;border-radius:12px;font-size:14px;font-weight:700}
+.res-ok{background:rgba(6,214,160,.1);color:var(--a3)}
+.res-no{background:rgba(255,107,107,.1);color:var(--a1)}
+
+/* Community */
+.post-card{background:var(--surf);border:1px solid var(--br);border-radius:var(--r);padding:16px;margin-bottom:12px;transition:border-color .2s}
+.post-card:hover{border-color:rgba(155,93,229,.4)}
+.post-hdr{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+.post-av{width:38px;height:38px;border-radius:12px;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:20px}
+.post-user{font-weight:800;font-size:13px}
+.post-meta{font-size:11px;color:var(--tx2)}
+.post-lang{margin-left:auto;background:rgba(6,214,160,.1);color:var(--a3);font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid rgba(6,214,160,.2)}
+.post-txt{font-size:14px;line-height:1.6;margin-bottom:12px}
+.post-tags{display:flex;gap:6px;margin-bottom:12px}
+.tag{background:rgba(155,93,229,.15);color:var(--p);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.post-acts{display:flex;gap:12px}
+.post-act{background:none;border:none;color:var(--tx2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;transition:all .2s}
+.post-act:hover{background:rgba(255,255,255,.06);color:var(--tx)}
+.post-act.liked{color:var(--a1)}
+.new-post{background:var(--surf);border:1px solid var(--br);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:center;cursor:pointer;transition:border-color .2s}
+.new-post:hover{border-color:var(--p)}
+.post-ph{flex:1;color:var(--tx2);font-size:14px}
+.post-sub{background:var(--p);color:white;border:none;border-radius:10px;padding:8px 16px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer}
+.compose-box{background:var(--surf);border:1px solid var(--br);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.compose-ta{width:100%;background:var(--surf2);border:1px solid var(--br);border-radius:12px;padding:12px;color:var(--tx);font-family:'Nunito',sans-serif;font-size:14px;resize:none;height:100px;margin-bottom:12px;outline:none}
+.compose-acts{display:flex;gap:8px;justify-content:flex-end}
+.btn-cancel{background:var(--surf2);border:none;color:var(--tx2);padding:10px 16px;border-radius:10px;font-family:'Nunito';font-weight:800;cursor:pointer;font-size:13px}
+
+/* History */
+.hist-item{background:var(--surf);border:1px solid var(--br);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.hist-ico{font-size:24px}
+.hist-info{flex:1}
+.hist-title{font-size:14px;font-weight:700}
+.hist-meta{font-size:12px;color:var(--tx2)}
+.hist-score{font-size:13px;font-weight:800;color:var(--a3)}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end}
+.sheet{background:var(--surf);border-radius:24px 24px 0 0;width:100%;max-width:430px;margin:0 auto;padding:20px;max-height:70vh;overflow-y:auto}
+.handle{width:40px;height:4px;background:var(--br);border-radius:4px;margin:0 auto 20px}
+.sheet-title{font-size:18px;font-weight:900;margin-bottom:16px}
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.lang-opt{background:var(--surf2);border:2px solid transparent;border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s}
+.lang-opt:hover,.lang-opt.on{border-color:var(--p);background:rgba(155,93,229,.15)}
+.lang-flag{font-size:24px}
+.lang-name{font-size:11px;font-weight:700;margin-top:4px}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .3s ease forwards}
+
+/* Big button */
+.big-btn{width:100%;background:var(--p);border:none;color:white;padding:14px;border-radius:14px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}
+`;
+
+// ─── 언어 선택 모달 ─────────────────────────────────────────
+function LangModal({ title, selected, onSelect, onClose }) {
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div className="handle" />
+        <div className="sheet-title">{title}</div>
+        <div className="lang-grid">
+          {LANGUAGES.map(l => (
+            <div key={l.code} className={`lang-opt ${selected === l.code ? "on" : ""}`}
+              onClick={() => { onSelect(l.code); onClose(); }}>
+              <div className="lang-flag">{l.flag}</div>
+              <div className="lang-name">{l.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 단어 학습 ───────────────────────────────────────────────
+function VocabMode({ topic, nativeLang }) {
+  const words = VOCAB_DATA[topic] || VOCAB_DATA.travel;
+  const [idx, setIdx] = useState(0);
+  const [known, setKnown] = useState([]);
+  const w = words[idx];
+  const lang = LANGUAGES.find(l => l.code === nativeLang) || LANGUAGES[1];
+  const tr = w[nativeLang] || w.ko || "—";
+
+  return (
+    <div>
+      <div className="stats-row">
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--a3)"}}>{known.length}</div><div className="stat-lbl">✅ 암기완료</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--a2)"}}>{words.length - known.length}</div><div className="stat-lbl">📖 남은단어</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--p)"}}>{Math.round(known.length/words.length*100)}%</div><div className="stat-lbl">🎯 완성도</div></div>
+      </div>
+      <div className="prog-bar"><div className="prog-fill" style={{width:`${idx/words.length*100}%`}} /></div>
+      <div style={{fontSize:11,color:"var(--tx2)",marginBottom:16,fontWeight:700}}>{idx+1} / {words.length} 단어</div>
+
+      <div className="vocab-card anim">
+        <div className="vocab-word">{w.en}</div>
+        <div className="vocab-ph">[ {w.en} ]</div>
+        <div className="vocab-trans">
+          <div className="trans-pill"><span className="trans-lang">{lang.flag} </span>{tr}</div>
+          {w.ja && nativeLang !== "ja" && <div className="trans-pill"><span className="trans-lang">🇯🇵 </span>{w.ja}</div>}
+          {w.zh && nativeLang !== "zh" && <div className="trans-pill"><span className="trans-lang">🇨🇳 </span>{w.zh}</div>}
+          {w.es && nativeLang !== "es" && <div className="trans-pill"><span className="trans-lang">🇪🇸 </span>{w.es}</div>}
+        </div>
+        <div className="vocab-ex">💬 {w.example}</div>
+      </div>
+
+      <div className="card-nav">
+        <div className="dots">
+          {words.map((_, i) => <div key={i} className={`dot ${known.includes(i) ? "done" : i === idx ? "on" : ""}`} />)}
+        </div>
+        <div className="card-btns">
+          <button className="btn btn-skip" onClick={() => setIdx(Math.min(idx+1,words.length-1))}>다음 ›</button>
+          <button className="btn btn-know" onClick={() => { setKnown(p=>[...p,idx]); setIdx(Math.min(idx+1,words.length-1)); }}>암기 ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 다이얼로그 ──────────────────────────────────────────────
+function DialogMode({ topic, nativeLang }) {
+  const dialogs = DIALOG_DATA[topic] || DIALOG_DATA.travel;
+  const [di, setDi] = useState(0);
+  const [showTr, setShowTr] = useState(true);
+  const d = dialogs[di];
+
+  return (
+    <div>
+      <div className="pill-row">
+        {dialogs.map((dl, i) => <button key={i} className={`pill ${i===di?"on":""}`} onClick={() => setDi(i)}>{dl.title}</button>)}
+      </div>
+      <div className="pill-row">
+        <button className={`pill ${showTr?"on":""}`} onClick={() => setShowTr(true)}>🌏 번역 보기</button>
+        <button className={`pill ${!showTr?"on":""}`} onClick={() => setShowTr(false)}>💪 영어만</button>
+      </div>
+      <div className="dialog-card anim">
+        <div className="dialog-hdr">🎬 {d.title}</div>
+        <div className="dialog-body">
+          {d.exchanges.map((ex, i) => (
+            <div key={i} className={`exchange ${ex.speaker==="B"?"right":""}`}>
+              <div className={`spk spk-${ex.speaker}`}>{ex.speaker}</div>
+              <div className="bubble">
+                <div className="role-lbl">{ex.role}</div>
+                <div className="exch-en">{ex.en}</div>
+                {showTr && <div className="exch-ko">{ex.ko}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <button className="big-btn">🎤 롤플레이 연습 시작</button>
+    </div>
+  );
+}
+
+// ─── 퀴즈 ────────────────────────────────────────────────────
+function QuizMode({ topic }) {
+  const words = VOCAB_DATA[topic] || VOCAB_DATA.travel;
+  const [qi, setQi] = useState(0);
+  const [sel, setSel] = useState(null);
+  const [score, setScore] = useState(0);
+  const w = words[qi % words.length];
+  const options = [w, ...words.filter((_,i)=>i!==qi%words.length).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);
+  const letters = ["A","B","C","D"];
+
+  const pick = opt => {
+    if (sel) return;
+    setSel(opt);
+    if (opt.en === w.en) setScore(s=>s+1);
+  };
+
+  return (
+    <div>
+      <div className="stats-row">
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--a2)"}}>{score}</div><div className="stat-lbl">🏆 점수</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--p)"}}>{qi+1}</div><div className="stat-lbl">📝 문제</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--a3)"}}>{Math.round(score/Math.max(qi,1)*100)}%</div><div className="stat-lbl">✨ 정확도</div></div>
+      </div>
+      <div className="quiz-card anim">
+        <div style={{fontSize:11,color:"var(--tx2)",marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>한국어 번역은?</div>
+        <div className="quiz-q">{w.en}</div>
+        <div className="quiz-ctx">"{w.example}"</div>
+        <div className="quiz-opts">
+          {options.map((opt,i) => (
+            <button key={i} className={`quiz-opt ${sel?(opt.en===w.en?"correct":sel.en===opt.en?"wrong":""):""}`}
+              onClick={() => pick(opt)} disabled={!!sel}>
+              <div className="opt-letter">{letters[i]}</div>
+              {opt.ko}
+            </button>
+          ))}
+        </div>
+        {sel && <div className={`quiz-res ${sel.en===w.en?"res-ok":"res-no"}`}>
+          {sel.en===w.en?"✅ 정답!":"❌ 오답 — 정답: "+w.ko}
+        </div>}
+      </div>
+      {sel && <button className="big-btn" style={{background:"var(--a2)",color:"#0f0e17"}} onClick={() => { setSel(null); setQi(q=>q+1); }}>다음 문제 →</button>}
+    </div>
+  );
+}
+
+// ─── AI 튜터 ──────────────────────────────────────────────────
+function AIMode({ topic, nativeLang }) {
+  const topicInfo = TOPICS.find(t => t.id === topic);
+  const [msgs, setMsgs] = useState([{
+    role:"assistant",
+    text:`안녕하세요! 저는 AI 언어 튜터 LUMI예요 🌟\n\n오늘은 "${topicInfo?.label || "영어"}" 주제로 대화 연습을 해볼게요!\n\nFeel free to chat with me in English!`,
+    tr:"Hello! I'm LUMI, your AI language tutor. Let's practice together!"
+  }]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs]);
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const userText = input.trim();
+    setInput("");
+    setMsgs(p => [...p, { role:"user", text:userText }]);
+    setLoading(true);
+
+    try {
+      const history = msgs.map(m => ({ role: m.role, content: m.text }));
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:`You are LUMI, a friendly AI language tutor. Topic: ${topicInfo?.label} (${topicInfo?.ko}). Native language: ${LANGUAGES.find(l=>l.code===nativeLang)?.name || "Korean"}. Respond in English primarily, add Korean translation of key phrases in parentheses. Be encouraging, correct mistakes gently. Keep responses to 2-4 sentences.`,
+          messages:[...history, { role:"user", content:userText }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.[0]?.text || "Sorry, try again!";
+      const parts = raw.split("\n\n");
+      setMsgs(p => [...p, { role:"assistant", text:parts[0], tr:parts[1]||"" }]);
+    } catch {
+      setMsgs(p => [...p, { role:"assistant", text:"Connection error. Please try again! 😊", tr:"연결 오류" }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="ai-hdr">
+        <div className="ai-avatar">🤖</div>
+        <div>
+          <div className="ai-name">LUMI AI 튜터</div>
+          <div className="ai-desc">Powered by Claude · {topicInfo?.ko} 주제</div>
+        </div>
+        <div className="ai-status">● 온라인</div>
+      </div>
+      <div className="chat-msgs">
+        {msgs.map((m,i) => (
+          <div key={i} className={`msg ${m.role==="user"?"user":""}`}>
+            <div className="msg-av">{m.role==="user"?"😊":"🤖"}</div>
+            <div className="msg-bub">
+              {m.text}
+              {m.tr && <div className="msg-tr">{m.tr}</div>}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="msg">
+            <div className="msg-av">🤖</div>
+            <div className="msg-bub"><div className="typing"><div className="td"/><div className="td"/><div className="td"/></div></div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+      <div className="chat-row">
+        <input className="chat-in" value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&send()} placeholder="영어로 말해보세요..." />
+        <button className="send-btn" onClick={send} disabled={loading||!input.trim()}>
+          {loading?"⏳":"➤"}
+        </button>
+      </div>
+      <div className="quick-btns">
+        {["Give me an example","Correct my English","Teach me a new word","Let's practice dialog"].map(q => (
+          <button key={q} className="quick-btn" onClick={() => setInput(q)}>{q}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── 커뮤니티 ────────────────────────────────────────────────
+function CommunityMode() {
+  const [posts, setPosts] = useState(COMMUNITY_POSTS);
+  const [liked, setLiked] = useState([]);
+  const [compose, setCompose] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const toggleLike = id => {
+    if (liked.includes(id)) {
+      setLiked(p=>p.filter(x=>x!==id));
+      setPosts(p=>p.map(x=>x.id===id?{...x,likes:x.likes-1}:x));
+    } else {
+      setLiked(p=>[...p,id]);
+      setPosts(p=>p.map(x=>x.id===id?{...x,likes:x.likes+1}:x));
+    }
+  };
+
+  const submit = () => {
+    if (!draft.trim()) return;
+    setPosts(p=>[{ id:Date.now(), user:"나 👤", avatar:"🌟", time:"방금", text:draft, likes:0, replies:0, lang:"학습중", tags:["공유"] },...p]);
+    setDraft(""); setCompose(false);
+  };
+
+  return (
+    <div>
+      {compose ? (
+        <div className="compose-box">
+          <textarea className="compose-ta" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="학습 팁, 표현, 질문을 공유해보세요..." />
+          <div className="compose-acts">
+            <button className="btn-cancel" onClick={()=>setCompose(false)}>취소</button>
+            <button className="post-sub" onClick={submit}>게시 ✨</button>
+          </div>
+        </div>
+      ) : (
+        <div className="new-post" onClick={()=>setCompose(true)}>
+          <div style={{fontSize:28}}>✍️</div>
+          <div className="post-ph">학습 내용을 공유해보세요...</div>
+          <button className="post-sub">작성</button>
+        </div>
+      )}
+      {posts.map(p => (
+        <div key={p.id} className="post-card anim">
+          <div className="post-hdr">
+            <div className="post-av">{p.avatar}</div>
+            <div><div className="post-user">{p.user}</div><div className="post-meta">{p.time}</div></div>
+            <div className="post-lang">{p.lang}</div>
+          </div>
+          <div className="post-txt">{p.text}</div>
+          <div className="post-tags">{p.tags.map(t=><span key={t} className="tag">#{t}</span>)}</div>
+          <div className="post-acts">
+            <button className={`post-act ${liked.includes(p.id)?"liked":""}`} onClick={()=>toggleLike(p.id)}>
+              {liked.includes(p.id)?"❤️":"🤍"} {p.likes}
+            </button>
+            <button className="post-act">💬 {p.replies}</button>
+            <button className="post-act">🔖 저장</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── 학습 기록 ────────────────────────────────────────────────
+function HistoryTab({ history }) {
+  const icons = { vocab:"📖", dialog:"💬", quiz:"🎯", ai:"🤖", community:"👥" };
+  return (
+    <div>
+      <div className="stats-row">
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--a2)"}}>{history.length}</div><div className="stat-lbl">📚 세션</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--a3)"}}>{history.reduce((a,h)=>a+(h.words||0),0)}</div><div className="stat-lbl">🔤 단어</div></div>
+        <div className="stat-card"><div className="stat-num" style={{color:"var(--p)"}}>{history.length*5}분</div><div className="stat-lbl">⏱️ 시간</div></div>
+      </div>
+      {history.length===0 ? (
+        <div style={{textAlign:"center",padding:"40px 20px",color:"var(--tx2)"}}>
+          <div style={{fontSize:48,marginBottom:12}}>📝</div>
+          <div style={{fontWeight:800}}>아직 학습 기록이 없어요</div>
+          <div style={{fontSize:13,marginTop:8}}>학습을 시작해보세요!</div>
+        </div>
+      ) : history.map((item,i) => (
+        <div key={i} className="hist-item">
+          <div className="hist-ico">{icons[item.mode]||"📖"}</div>
+          <div className="hist-info">
+            <div className="hist-title">{item.topic} · {item.modeName}</div>
+            <div className="hist-meta">{item.date} · {item.words||0}개 단어</div>
+          </div>
+          <div className="hist-score">{item.score||"완료"}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── 메인 앱 ─────────────────────────────────────────────────
+export default function App() {
+  const [nativeLang, setNativeLang] = useState("ko");
+  const [targetLang, setTargetLang] = useState("en");
+  const [topic, setTopic] = useState("travel");
+  const [mode, setMode] = useState("vocab");
+  const [tab, setTab] = useState("learn");
+  const [showNative, setShowNative] = useState(false);
+  const [showTarget, setShowTarget] = useState(false);
+  const [streak] = useState(7);
+  const [history, setHistory] = useState([
+    { mode:"vocab", modeName:"단어학습", topic:"여행", date:"오늘 09:30", words:5, score:"5/5 ✨" },
+    { mode:"quiz",  modeName:"퀴즈",    topic:"비즈니스", date:"어제 20:15", words:8, score:"7/8 💪" },
+  ]);
+
+  // 저장
+  useEffect(() => {
+    try {
+      window.storage?.set("ll_settings", JSON.stringify({ nativeLang, targetLang }));
+      window.storage?.set("ll_history", JSON.stringify(history));
+    } catch {}
+  }, [nativeLang, targetLang, history]);
+
+  // 불러오기
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const s = await window.storage?.get("ll_settings");
+        const h = await window.storage?.get("ll_history");
+        if (s) { const v = JSON.parse(s.value); setNativeLang(v.nativeLang||"ko"); setTargetLang(v.targetLang||"en"); }
+        if (h) setHistory(JSON.parse(h.value));
+      } catch {}
+    };
+    load();
+  }, []);
+
+  const nl = LANGUAGES.find(l=>l.code===nativeLang)||LANGUAGES[1];
+  const tl = LANGUAGES.find(l=>l.code===targetLang)||LANGUAGES[0];
+  const topicInfo = TOPICS.find(t=>t.id===topic);
+  const modeInfo  = MODES.find(m=>m.id===mode);
+
+  const renderContent = () => {
+    if (tab==="history") return <HistoryTab history={history} />;
+    switch(mode) {
+      case "vocab":     return <VocabMode topic={topic} nativeLang={nativeLang} />;
+      case "dialog":    return <DialogMode topic={topic} nativeLang={nativeLang} />;
+      case "quiz":      return <QuizMode topic={topic} />;
+      case "ai":        return <AIMode topic={topic} nativeLang={nativeLang} />;
+      case "community": return <CommunityMode />;
+      default:          return <VocabMode topic={topic} nativeLang={nativeLang} />;
+    }
+  };
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div className="app">
+        {/* 헤더 */}
+        <div className="hdr">
+          <div className="hdr-top">
+            <div className="logo">LUMI<span>Lang</span></div>
+            <div className="streak">🔥 {streak}일 연속</div>
+          </div>
+          <div className="lang-row">
+            <button className="lang-btn" onClick={()=>setShowNative(true)}>{nl.flag} {nl.name}</button>
+            <div className="arrow">⇄</div>
+            <button className="lang-btn" onClick={()=>setShowTarget(true)}>{tl.flag} {tl.name}</button>
+          </div>
+        </div>
+
+        {/* 콘텐츠 */}
+        <div className="scroll">
+          {tab==="learn" && (
+            <>
+              <div className="sec-title">📍 주제 선택</div>
+              <div className="topic-grid">
+                {TOPICS.map(t => (
+                  <div key={t.id} className={`topic-card ${topic===t.id?"on":""}`} onClick={()=>setTopic(t.id)}>
+                    <div className="topic-icon">{t.icon}</div>
+                    <div className="topic-lbl">{t.ko}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="sec-title">🎮 학습 모드</div>
+              <div className="modes">
+                {MODES.map(m => (
+                  <div key={m.id} className={`mode-card ${mode===m.id?"on":""}`} onClick={()=>setMode(m.id)}>
+                    <div className="mode-icon">{m.icon}</div>
+                    <div className="mode-lbl">{m.label}</div>
+                    <div className="mode-desc">{m.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="sec-title">{topicInfo?.icon} {topicInfo?.ko} · {modeInfo?.label}</div>
+            </>
+          )}
+          {renderContent()}
+        </div>
+
+        {/* 하단 네비 */}
+        <div className="nav">
+          {[{id:"learn",icon:"🏠",label:"홈"},{id:"history",icon:"📊",label:"기록"},{id:"profile",icon:"👤",label:"프로필"}].map(t => (
+            <button key={t.id} className={`nav-item ${tab===t.id?"on":""}`} onClick={()=>setTab(t.id)}>
+              <div style={{fontSize:22}}>{t.icon}</div>
+              <div>{t.label}</div>
+              <div className="nav-dot" />
+            </button>
+          ))}
+        </div>
+
+        {/* 모달 */}
+        {showNative && <LangModal title="내 모국어 선택" selected={nativeLang} onSelect={setNativeLang} onClose={()=>setShowNative(false)} />}
+        {showTarget && <LangModal title="학습할 언어 선택" selected={targetLang} onSelect={setTargetLang} onClose={()=>setShowTarget(false)} />}
+      </div>
+    </>
+  );
+}
